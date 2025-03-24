@@ -1,0 +1,43 @@
+#install packages
+install.packages("taxize")
+install.packages("readxl")  # Install package (if not installed)
+
+
+#pipeline prep
+#load packages
+library(phyloseq)
+library(dplyr)
+library(taxize)
+library(readxl)
+
+
+#working direction
+getwd()
+#set the working directory to another one
+setwd("C:/Users/vg1u23/OneDrive - University of Southampton/Desktop/PhD_Gschiel/Project/Project1_Bioinformatics/metadata_files/metadataperstudy")
+#list files
+list.files("C:/Users/vg1u23/OneDrive - University of Southampton/Desktop/PhD_Gschiel/Project/Project1_Bioinformatics/metadata_files/metadataperstudy")
+
+#load the metadata file
+metadata <- read_excel("PRJEB28955.xlsx")  # Load your file
+
+# Function to get plant family from ITIS (or use db = "ncbi" for NCBI)
+get_family <- function(species_name) {
+  classification_info <- tryCatch(
+    classification(species_name, db = "ncbi"), 
+    error = function(e) return(NA)  # Return NA if species not found
+  )
+  
+  if (!is.na(classification_info) && length(classification_info) > 0) {
+    family <- classification_info[[1]] %>%
+      filter(rank == "family") %>%
+      pull(name)
+    
+    return(ifelse(length(family) > 0, family, NA))
+  }
+  return(NA)
+}
+
+# Apply function to the "plant species" column
+metadata$plant_family <- sapply(metadata$`plant species`, get_family)
+#check metadata file
