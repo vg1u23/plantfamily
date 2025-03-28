@@ -41,3 +41,63 @@ get_family <- function(species_name) {
 # Apply function to the "plant species" column
 metadata$plant_family <- sapply(metadata$`plant species`, get_family)
 #check metadata file
+
+
+
+
+
+
+code to read in multiple files within a folder:
+# Install necessary packages
+install.packages("taxize")
+install.packages("readxl")
+install.packages("writexl")
+install.packages("dplyr")  # for pipe and filter
+library(taxize)
+library(readxl)
+library(writexl)
+library(dplyr)
+
+# Set working directory to input folder
+input_folder <- "C:/Users/vg1u23/OneDrive - University of Southampton/Desktop/PhD_Gschiel/Project/Project1_Bioinformatics/metadata_files/metadataperstudy"
+output_folder <- file.path(input_folder, "Project_PlantFamily")
+dir.create(output_folder, showWarnings = FALSE)
+
+# Function to get plant family using NCBI
+get_family <- function(species_name) {
+  classification_info <- tryCatch(
+    classification(species_name, db = "ncbi"), 
+    error = function(e) return(NA)
+  )
+  
+  if (!is.na(classification_info) && length(classification_info) > 0) {
+    family <- classification_info[[1]] %>%
+      filter(rank == "family") %>%
+      pull(name)
+    
+    return(ifelse(length(family) > 0, family, NA))
+  }
+  return(NA)
+}
+
+# Loop through all .xlsx files in the folder
+xlsx_files <- list.files(path = input_folder, pattern = "\\.xlsx$", full.names = TRUE)
+
+for (file in xlsx_files) {
+  message("Processing: ", basename(file))
+  metadata <- read_excel(file)
+  
+  # Only run if "plant species" column exists
+  if ("plant_species" %in% colnames(metadata)) {
+    metadata$plant_family <- sapply(metadata$`plant_species`, get_family)
+    
+    # Create new file path
+    output_file <- file.path(output_folder, paste0(tools::file_path_sans_ext(basename(file)), "_with_family.xlsx"))
+    
+    # Save the result
+    write_xlsx(metadata, output_file)
+  } else {
+    message("Skipping ", basename(file), ": 'plant species' column not found.")
+  }
+}
+
